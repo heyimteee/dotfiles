@@ -18,6 +18,9 @@ export PATH="$HOME/go/bin:$PATH"
 export PATH="$HOME/Library/Python/3.9/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 
+# Dotfiles CLI (if repo exists locally)
+[[ -d "$HOME/dev/dotfiles/bin" ]] && export PATH="$HOME/dev/dotfiles/bin:$PATH"
+
 {{- if eq .chezmoi.os "darwin" }}
 # macOS Homebrew
 export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
