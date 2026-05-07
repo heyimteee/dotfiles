@@ -1,0 +1,79 @@
+# Python Development & Daily Tools
+# Install with: pip3 install -r requirements.txt
+# Or use uv: uv pip install -r requirements.txt
+
+# Web Framework
+fastapi
+uvicorn[standard]
+starlette
+
+# Data Science & ML
+numpy
+pandas
+matplotlib
+scipy
+scikit-learn
+lightgbm
+
+# Deep Learning
+torch
+transformers
+tokenizers
+safetensors
+huggingface-hub
+
+# Database
+PyMySQL
+psycopg2
+SQLAlchemy
+
+# Document Processing
+python-docx
+PyPDF2
+XlsxWriter
+openpyxl
+xlrd
+xlwt
+
+# Utilities
+requests
+httpx
+beautifulsoup4
+lxml
+Pillow
+python-dotenv
+tenacity
+tqdm
+rich
+PyYAML
+click
+Jinja2
+Werkzeug
+
+# Development Tools
+black
+ruff
+pytest
+freezegun
+
+# Math Animation
+manim
+
+# Networking & APIs
+bcrypt
+cryptography
+passlib
+python-jose
+email-validator
+
+# Misc
+psutil
+watchdog
+watchfiles
+websockets
+pydantic
+pydantic-settings
+
+# Excluded (per user request):
+# google-generativeai
+# google-genai

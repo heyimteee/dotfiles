@@ -1,7 +1,8 @@
 README.md
 LICENSE
 install/
-backup/
+backup/*
+!backup/README.md
 docs/
 bin/
 .gitignore

@@ -1,0 +1,6 @@
+typescript
+vercel
+npm-check-updates
+@anthropic-ai/claude-code
+@google/gemini-cli
+safari-mcp

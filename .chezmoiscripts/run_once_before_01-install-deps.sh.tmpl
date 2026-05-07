@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euo pipefail
+
+OS="{{ .chezmoi.os }}"
+ARCH="{{ .chezmoi.arch }}"
+
+echo "📦 Installing dependencies..."
+
+install_macos() {
+    if [[ "$ARCH" == "arm64" ]] && [[ -f /opt/homebrew/bin/brew ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    fi
+    if ! command -v chezmoi &> /dev/null; then
+        brew install chezmoi
+    fi
+    brew install git zsh tmux fzf eza bat fd ripgrep zoxide duf bottom tree jq lazygit gh tldr thefuck curl wget gnupg coreutils make stow
+    echo "✅ macOS dependencies installed"
+}
+
+install_linux() {
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update
+        sudo apt-get install -y git zsh tmux fzf curl wget tree jq ripgrep fd-find bat build-essential gnupg
+        if ! command -v eza &> /dev/null; then
+            sudo mkdir -p /etc/apt/keyrings
+            wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
+            echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list
+            sudo apt-get update && sudo apt-get install -y eza
+        fi
+        if ! command -v chezmoi &> /dev/null; then
+            sh -c "$(curl -fsLS get.chezmoi.io)"
+            sudo mv ./bin/chezmoi /usr/local/bin/
+        fi
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y git zsh tmux fzf curl wget tree jq ripgrep fd-find bat eza zoxide duf gcc gcc-c++ make gnupg
+    elif command -v pacman &> /dev/null; then
+        sudo pacman -S --needed --noconfirm git zsh tmux fzf curl wget tree jq ripgrep fd bat eza zoxide duf bottom base-devel gnupg
+    fi
+    echo "✅ Linux dependencies installed"
+}
+
+case "$OS" in
+    darwin) install_macos ;;
+    linux) install_linux ;;
+    *) echo "❌ Unsupported OS: $OS"; exit 1 ;;
+esac

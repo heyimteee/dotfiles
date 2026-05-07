@@ -2,57 +2,175 @@
 set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO_URL="https://github.com/heyimteee/dotfiles.git"
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
+log_success() { echo -e "${GREEN}✅ $1${NC}"; }
+log_warn() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+log_error() { echo -e "${RED}❌ $1${NC}"; }
 
 cmd_install() {
     local group="${1:-}"
+    local util="${2:-}"
+    
+    if [[ -z "$group" ]]; then
+        echo "Usage: dot install <group>"
+        echo ""
+        echo "Groups:"
+        echo "  core      Essential CLI tools"
+        echo "  dev       Development languages & tools"
+        echo "  db        Databases"
+        echo "  media     Media processing tools"
+        echo "  monitor   Monitoring stack"
+        echo "  gui       GUI apps (macOS only)"
+        echo "  all       Everything except osdev"
+        echo "  util <pkg> Install a specific package"
+        return 1
+    fi
+    
     case "$group" in
-        core) brew bundle --file="$DOTFILES_DIR/install/Brewfile.core" ;;
-        dev) brew bundle --file="$DOTFILES_DIR/install/Brewfile.dev" ;;
-        db) brew bundle --file="$DOTFILES_DIR/install/Brewfile.db" ;;
-        media) brew bundle --file="$DOTFILES_DIR/install/Brewfile.media" ;;
-        monitor) brew bundle --file="$DOTFILES_DIR/install/Brewfile.monitor" ;;
-        gui) brew bundle --file="$DOTFILES_DIR/install/Brewfile.gui" ;;
-        all)
-            brew bundle --file="$DOTFILES_DIR/install/Brewfile.core"
-            brew bundle --file="$DOTFILES_DIR/install/Brewfile.dev"
-            brew bundle --file="$DOTFILES_DIR/install/Brewfile.db"
-            brew bundle --file="$DOTFILES_DIR/install/Brewfile.media"
-            brew bundle --file="$DOTFILES_DIR/install/Brewfile.monitor"
-            brew bundle --file="$DOTFILES_DIR/install/Brewfile.gui"
+        core|dev|db|media|monitor|gui)
+            if [[ "$OS" == "darwin" ]]; then
+                brew bundle --file="$DOTFILES_DIR/install/Brewfile.$group"
+            else
+                log_warn "Linux: install packages manually or use your package manager"
+                echo "  See: $DOTFILES_DIR/install/Brewfile.$group"
+            fi
             ;;
-        *) echo "Usage: dot install {core|dev|db|media|monitor|gui|all}" ; return 1 ;;
+        all)
+            for g in core dev db media monitor; do
+                cmd_install "$g"
+            done
+            [[ "$OS" == "darwin" ]] && cmd_install gui
+            ;;
+        util)
+            if [[ -z "$util" ]]; then
+                log_error "Usage: dot install util <package-name>"
+                return 1
+            fi
+            install_util "$util"
+            ;;
+        *)
+            log_error "Unknown group: $group"
+            return 1
+            ;;
     esac
+}
+
+install_util() {
+    local pkg="$1"
+    log_info "Installing $pkg..."
+    if [[ "$OS" == "darwin" ]]; then
+        brew install "$pkg"
+    elif command -v apt-get &> /dev/null; then
+        sudo apt-get install -y "$pkg"
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y "$pkg"
+    elif command -v pacman &> /dev/null; then
+        sudo pacman -S --needed --noconfirm "$pkg"
+    else
+        log_error "No package manager found for $pkg"
+        return 1
+    fi
+    log_success "$pkg installed"
 }
 
 cmd_backup() {
     local dir="$DOTFILES_DIR/backup/$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$dir"
-    brew list --formula > "$dir/brew-formulae.txt"
-    brew leaves > "$dir/brew-leaves.txt"
-    brew list --cask > "$dir/brew-casks.txt"
-    npm list -g --depth=0 > "$dir/npm-global.txt" 2>/dev/null || true
-    pip3 list > "$dir/pip-all.txt"
-    echo "Backup: $dir"
+    
+    if command -v brew &> /dev/null; then
+        brew list --formula > "$dir/brew-formulae.txt"
+        brew leaves > "$dir/brew-leaves.txt"
+        brew list --cask > "$dir/brew-casks.txt"
+    fi
+    if command -v npm &> /dev/null; then
+        npm list -g --depth=0 > "$dir/npm-global.txt" 2>/dev/null || true
+    fi
+    if command -v pip3 &> /dev/null; then
+        pip3 list > "$dir/pip-all.txt"
+    fi
+    if command -v code &> /dev/null; then
+        code --list-extensions > "$dir/vscode-extensions.txt"
+    fi
+    
+    rm -f "$DOTFILES_DIR/backup/latest"
+    ln -s "$(basename "$dir")" "$DOTFILES_DIR/backup/latest"
+    
+    log_success "Backup created: $dir"
 }
 
 cmd_sync() {
-    chezmoi re-add
+    log_info "Syncing dotfiles..."
+    chezmoi re-add 2>/dev/null || true
     chezmoi apply
     cd "$(chezmoi source-path)"
-    git add -A && git commit -m "sync: $(date '+%Y-%m-%d %H:%M:%S')" && git push
+    if git diff --quiet && git diff --cached --quiet; then
+        log_success "No changes to sync"
+        return 0
+    fi
+    git add -A
+    git commit -m "sync: $(date '+%Y-%m-%d %H:%M:%S')"
+    git push
+    log_success "Dotfiles synced!"
+}
+
+cmd_apply() {
+    chezmoi apply
+    log_success "Dotfiles applied"
+}
+
+cmd_update() {
+    chezmoi update
+    log_success "Dotfiles updated"
 }
 
 cmd_doctor() {
+    local issues=0
     for cmd in git zsh tmux fzf eza bat fd rg zoxide; do
-        command -v "$cmd" &>/dev/null && echo "✅ $cmd" || echo "❌ $cmd"
+        if command -v "$cmd" &>/dev/null; then
+            log_success "$cmd"
+        else
+            log_warn "$cmd (missing)"
+            ((issues++))
+        fi
     done
+    [[ $issues -eq 0 ]] && log_success "All checks passed!" || log_warn "$issues missing"
+}
+
+cmd_help() {
+    cat << 'EOF'
+Usage: dot <command> [args]
+
+Commands:
+  install <group>    Install package groups
+    core, dev, db, media, monitor, gui, all
+    util <pkg>       Install one package
+  backup             Snapshot current packages
+  sync               Push changes to GitHub
+  apply              Apply dotfiles
+  update             Pull latest and apply
+  doctor             Check dependencies
+
+Quick Start (new machine):
+  sh -c "$(curl -fsLS get.chezmoi.io)"
+  chezmoi init --apply https://github.com/heyimteee/dotfiles.git
+  dot install all
+EOF
 }
 
 case "${1:-help}" in
     install|i) shift; cmd_install "$@" ;;
     backup|b) cmd_backup ;;
     sync|s) cmd_sync ;;
+    apply|a) cmd_apply ;;
+    update|u) cmd_update ;;
     doctor|d) cmd_doctor ;;
-    *) echo "Usage: dot {install|backup|sync|doctor}" ;;
+    help|--help|-h|""|*) cmd_help ;;
 esac

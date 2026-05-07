@@ -1,0 +1,51 @@
+#!/bin/bash
+set -euo pipefail
+
+OS="{{ .chezmoi.os }}"
+
+echo "🔧 Finalizing setup..."
+
+if [[ "$SHELL" != *"zsh"* ]]; then
+    echo "🐚 Changing default shell to zsh..."
+    chsh -s "$(which zsh)" 2>/dev/null || true
+fi
+
+if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+    echo "📥 Installing Oh My Zsh..."
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+
+P10K_DIR=""
+if [[ "$OS" == "darwin" ]]; then
+    P10K_DIR="$(brew --prefix)/share/powerlevel10k"
+    if [[ ! -d "$P10K_DIR" ]]; then
+        brew install powerlevel10k
+    fi
+else
+    P10K_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
+    if [[ ! -d "$P10K_DIR" ]]; then
+        git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
+    fi
+fi
+
+ZSH_PLUGINS="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
+for plugin in zsh-autosuggestions zsh-syntax-highlighting zsh-interactive-cd; do
+    if [[ ! -d "$ZSH_PLUGINS/$plugin" ]]; then
+        echo "📥 Installing $plugin..."
+        git clone "https://github.com/zsh-users/${plugin}.git" "$ZSH_PLUGINS/$plugin" 2>/dev/null || \
+        git clone "https://github.com/changyuheng/${plugin}.git" "$ZSH_PLUGINS/$plugin" 2>/dev/null || true
+    fi
+done
+
+if [[ ! -d "$HOME/.nvm" ]]; then
+    echo "📥 Installing nvm..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+fi
+
+mkdir -p "$HOME/.local/bin"
+
+echo ""
+echo "🎉 Setup complete!"
+echo "  1. Restart terminal or run: exec zsh"
+echo "  2. First time? Run: p10k configure"
+echo "  3. Install more: dot install dev"
