@@ -1,0 +1,7 @@
+tap "homebrew/bundle"
+brew "prometheus"
+brew "node_exporter"
+brew "grafana"
+brew "cloudflared"
+brew "bore-cli"
+brew "ngrok"

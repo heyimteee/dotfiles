@@ -1,0 +1,7 @@
+tap "homebrew/bundle"
+brew "ffmpeg"
+brew "espeak-ng"
+brew "imagemagick"
+brew "poppler"
+brew "pdftk-java"
+brew "qpdf"

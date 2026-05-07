@@ -1,0 +1,58 @@
+#!/bin/bash
+set -euo pipefail
+
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_URL="https://github.com/heyimteee/dotfiles.git"
+
+cmd_install() {
+    local group="${1:-}"
+    case "$group" in
+        core) brew bundle --file="$DOTFILES_DIR/install/Brewfile.core" ;;
+        dev) brew bundle --file="$DOTFILES_DIR/install/Brewfile.dev" ;;
+        db) brew bundle --file="$DOTFILES_DIR/install/Brewfile.db" ;;
+        media) brew bundle --file="$DOTFILES_DIR/install/Brewfile.media" ;;
+        monitor) brew bundle --file="$DOTFILES_DIR/install/Brewfile.monitor" ;;
+        gui) brew bundle --file="$DOTFILES_DIR/install/Brewfile.gui" ;;
+        all)
+            brew bundle --file="$DOTFILES_DIR/install/Brewfile.core"
+            brew bundle --file="$DOTFILES_DIR/install/Brewfile.dev"
+            brew bundle --file="$DOTFILES_DIR/install/Brewfile.db"
+            brew bundle --file="$DOTFILES_DIR/install/Brewfile.media"
+            brew bundle --file="$DOTFILES_DIR/install/Brewfile.monitor"
+            brew bundle --file="$DOTFILES_DIR/install/Brewfile.gui"
+            ;;
+        *) echo "Usage: dot install {core|dev|db|media|monitor|gui|all}" ; return 1 ;;
+    esac
+}
+
+cmd_backup() {
+    local dir="$DOTFILES_DIR/backup/$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$dir"
+    brew list --formula > "$dir/brew-formulae.txt"
+    brew leaves > "$dir/brew-leaves.txt"
+    brew list --cask > "$dir/brew-casks.txt"
+    npm list -g --depth=0 > "$dir/npm-global.txt" 2>/dev/null || true
+    pip3 list > "$dir/pip-all.txt"
+    echo "Backup: $dir"
+}
+
+cmd_sync() {
+    chezmoi re-add
+    chezmoi apply
+    cd "$(chezmoi source-path)"
+    git add -A && git commit -m "sync: $(date '+%Y-%m-%d %H:%M:%S')" && git push
+}
+
+cmd_doctor() {
+    for cmd in git zsh tmux fzf eza bat fd rg zoxide; do
+        command -v "$cmd" &>/dev/null && echo "✅ $cmd" || echo "❌ $cmd"
+    done
+}
+
+case "${1:-help}" in
+    install|i) shift; cmd_install "$@" ;;
+    backup|b) cmd_backup ;;
+    sync|s) cmd_sync ;;
+    doctor|d) cmd_doctor ;;
+    *) echo "Usage: dot {install|backup|sync|doctor}" ;;
+esac

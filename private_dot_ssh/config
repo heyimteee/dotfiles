@@ -1,0 +1,16 @@
+Host *
+  AddKeysToAgent yes
+  UseKeychain yes
+  IdentityFile ~/.ssh/id_ed25519
+
+Host lifeguard
+  HostName 208.109.215.42
+  User lifeguardpro
+  Port 45969
+  IdentityFile ~/.ssh/id_ed25519
+
+Host fircomnew
+  HostName 208.109.215.42
+  User fircomnew
+  Port 45969
+  IdentityFile ~/.ssh/id_ed25519

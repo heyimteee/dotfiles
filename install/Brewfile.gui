@@ -1,0 +1,8 @@
+tap "homebrew/bundle"
+cask "ghostty"
+cask "font-monaspace-nerd-font"
+cask "font-monaspice-nerd-font"
+cask "font-noto-sans-symbols-2"
+cask "middleclick"
+cask "goreleaser"
+cask "ngrok"
