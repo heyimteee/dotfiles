@@ -11,7 +11,7 @@ return {
     config = function()
       local lint = require 'lint'
       lint.linters_by_ft = {
-        markdown = { 'markdownlint' },
+        -- Requires global `markdownlint-cli2` npm install, skip unless installed
         php = { 'phpstan' },
       }
 
